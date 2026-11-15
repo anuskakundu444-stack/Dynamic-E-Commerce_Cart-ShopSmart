@@ -2,9 +2,20 @@ import base64
 from operator import sub
 from pathlib import Path
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
+from io import BytesIO
 
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Paragraph,
+    Spacer,
+    Table,
+    TableStyle
+)
 
 # =====================================================
 # 1. PAGE CONFIGURATION
@@ -155,7 +166,8 @@ products = {
         "price": 50000,
         "category": "Electronics",
         "image": "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=600",
-        "description": "Powerful laptop for study and work."
+        "description": "Powerful laptop for study and work.",
+        "stock": 10
     },
 
     "mouse": {
@@ -163,7 +175,8 @@ products = {
         "price": 500,
         "category": "Accessories",
         "image": "https://images.unsplash.com/photo-1527814050087-3793815479db?w=600",
-        "description": "Comfortable and responsive computer mouse."
+        "description": "Comfortable and responsive computer mouse.",
+        "stock": 20
     },
 
     "keyboard": {
@@ -171,7 +184,8 @@ products = {
         "price": 1200,
         "category": "Accessories",
         "image": "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=600",
-        "description": "Modern keyboard for everyday typing."
+        "description": "Modern keyboard for everyday typing.",
+        "stock": 15
     },
 
     "headphones": {
@@ -179,7 +193,8 @@ products = {
         "price": 2000,
         "category": "Audio",
         "image": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600",
-        "description": "Enjoy clear and immersive audio."
+        "description": "Enjoy clear and immersive audio.",
+        "stock": 25
     },
 
     "pen": {
@@ -187,7 +202,8 @@ products = {
         "price": 10,
         "category": "Stationery",
         "image": "https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?w=600",
-        "description": "Smooth writing pen for everyday use."
+        "description": "Smooth writing pen for everyday use.",
+        "stock": 100
     },
 
     "smartphone": {
@@ -195,7 +211,8 @@ products = {
         "price": 25000,
         "category": "Electronics",
         "image": "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600",
-        "description": "Feature-rich smartphone for communication and entertainment."
+        "description": "Feature-rich smartphone for communication and entertainment.",
+        "stock": 30
     },
 
     "tablet": {
@@ -203,7 +220,8 @@ products = {
         "price": 18000,
         "category": "Electronics",
         "image": "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=600",
-        "description": "Portable tablet for reading, learning and browsing."
+        "description": "Portable tablet for reading, learning and browsing.",
+        "stock": 20
     },
 
     "monitor": {
@@ -211,7 +229,8 @@ products = {
         "price": 12000,
         "category": "Electronics",
         "image": "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=600",
-        "description": "Clear display monitor for work and entertainment."
+        "description": "Clear display monitor for work and entertainment.",
+        "stock": 15
     },
 
     "printer": {
@@ -219,7 +238,8 @@ products = {
         "price": 8000,
         "category": "Electronics",
         "image": "https://images.unsplash.com/photo-1612815154858-60aa4c59eaa6?w=600",
-        "description": "Convenient printer for home and office documents."
+        "description": "Convenient printer for home and office documents.",
+        "stock": 10
     },
 
     "usb drive": {
@@ -227,7 +247,8 @@ products = {
         "price": 600,
         "category": "Accessories",
         "image": "https://images.unsplash.com/photo-1623126908029-58cb08a2b272?w=600",
-        "description": "Compact USB drive for storing and transferring files."
+        "description": "Compact USB drive for storing and transferring files.",
+        "stock": 50
     },
 
     "bluetooth speaker": {
@@ -235,7 +256,8 @@ products = {
         "price": 1500,
         "category": "Audio",
         "image": "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=600",
-        "description": "Portable speaker with clear and powerful sound."
+        "description": "Portable speaker with clear and powerful sound.",
+        "stock": 20
     },
 
     "earbuds": {
@@ -243,7 +265,8 @@ products = {
         "price": 2500,
         "category": "Audio",
         "image": "https://images.unsplash.com/photo-1606220945770-b5b6c2c55bf1?w=600",
-        "description": "Wireless earbuds for music and calls."
+        "description": "Wireless earbuds for music and calls.",
+        "stock": 30
     },
 
     "microphone": {
@@ -251,7 +274,8 @@ products = {
         "price": 1800,
         "category": "Audio",
         "image": "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=600",
-        "description": "Microphone for recording and online meetings."
+        "description": "Microphone for recording and online meetings.",
+        "stock": 15
     },
 
     "notebook": {
@@ -259,7 +283,8 @@ products = {
         "price": 80,
         "category": "Stationery",
         "image": "https://images.unsplash.com/photo-1531346878377-a5be20888e57?w=600",
-        "description": "Notebook for notes and everyday writing."
+        "description": "Notebook for notes and everyday writing.",
+        "stock": 100
     },
 
     "marker": {
@@ -267,7 +292,8 @@ products = {
         "price": 150,
         "category": "Stationery",
         "image": "https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600",
-        "description": "Colourful markers for writing and creative work."
+        "description": "Colourful markers for writing and creative work.",
+        "stock": 50
     }
 }
 
@@ -317,12 +343,15 @@ categories = [
 
 defaults = {
     "cart": {},
+    "wishlist": [],
     "discount": 0,
     "coupon": "",
     "orders": [],
     "page": "Home",
     "search": "",
-    "category": "All"
+    "category": "All",
+    "selected_product": None,
+    "recently_viewed": [],
 }
 
 for key, value in defaults.items():
@@ -365,20 +394,55 @@ def product_label(name, qty):
     return plural_names.get(name, singular + "s")
 
 
+
 def add_to_cart(name):
 
-    if name in st.session_state.cart:
-        st.session_state.cart[name] += 1
+    available_stock = products[name]["stock"]
+    cart_quantity = st.session_state.cart.get(name, 0)
+
+    if cart_quantity >= available_stock:
+
+        st.toast(
+            f"Sorry! Only {available_stock} units of "
+            f"{products[name]['name']} are available."
+        )
+
+        return False
+
+    st.session_state.cart[name] = cart_quantity + 1
+
+    return True
+
+
+def toggle_wishlist(name):
+
+    if name in st.session_state.wishlist:
+
+        st.session_state.wishlist.remove(name)
+
     else:
-        st.session_state.cart[name] = 1
+
+        st.session_state.wishlist.append(name)
+
 
 
 def change_quantity(name, amount):
 
     new_qty = st.session_state.cart[name] + amount
 
+    available_stock = products[name]["stock"]
+
+    if new_qty > available_stock:
+
+        st.toast(
+            f"Only {available_stock} units are available."
+        )
+
+        return
+
     if new_qty <= 0:
         del st.session_state.cart[name]
+
     else:
         st.session_state.cart[name] = new_qty
 
@@ -414,12 +478,22 @@ def calculate_bill():
     discount_amount = 0
 
     if st.session_state.coupon:
-        coupon = coupons[st.session_state.coupon]
 
-        discount_amount = min(
-            subtotal * coupon["discount"] / 100,
-            coupon["max_discount"]
-        )
+        coupon_code = st.session_state.coupon
+
+        # Validate first-purchase coupon
+        if coupon_code == "WELCOME15" and st.session_state.orders:
+            discount_amount = 0
+
+        else:
+
+            coupon = coupons[coupon_code]
+
+            discount_amount = min(
+                subtotal * coupon["discount"] / 100,
+                coupon["max_discount"]
+            )
+
 
     taxable_amount = subtotal - discount_amount
 
@@ -429,8 +503,172 @@ def calculate_bill():
 
     return subtotal, discount_amount, tax, grand_total
 
+# =====================================================
+# PDF INVOICE GENERATION
+# =====================================================
 
-#Dialogue box for order confirmation
+def generate_invoice(order):
+
+    buffer = BytesIO()
+
+    pdf = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=40,
+        leftMargin=40,
+        topMargin=40,
+        bottomMargin=40
+    )
+
+    styles = getSampleStyleSheet()
+
+    elements = []
+
+    # Store heading
+
+    elements.append(
+        Paragraph(
+            "<b>ShopSmart</b>",
+            styles["Title"]
+        )
+    )
+
+    elements.append(
+        Paragraph(
+            "Your Everyday Shopping Destination",
+            styles["Normal"]
+        )
+    )
+
+    elements.append(Spacer(1, 20))
+
+    elements.append(
+        Paragraph(
+            "<b>INVOICE</b>",
+            styles["Heading1"]
+        )
+    )
+
+    elements.append(Spacer(1, 10))
+
+    # Order information
+
+    order_details = [
+        ["Invoice Number:", order["order_id"]],
+        ["Order Date:", order["date"]],
+        ["Customer:", order["customer"]],
+        ["Email:", order["email"]],
+        ["Phone:", order["phone"]],
+        ["Address:", order["address"]],
+        ["Payment Method:", order["payment"]]
+    ]
+
+    details_table = Table(
+        order_details,
+        colWidths=[120, 370]
+    )
+
+    details_table.setStyle(
+        TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, -1), 9),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 8)
+        ])
+    )
+
+    elements.append(details_table)
+
+    elements.append(Spacer(1, 20))
+
+    # Product table
+
+    data = [
+        ["Product", "Quantity", "Unit Price", "Amount"]
+    ]
+
+    for item in order["items"]:
+
+        data.append([
+            products[item["name"]]["name"],
+            str(item["qty"]),
+            f"INR {item['price']:,.2f}",
+            f"INR {item['price'] * item['qty']:,.2f}"
+        ])
+
+    product_table = Table(
+        data,
+        colWidths=[180, 70, 110, 130]
+    )
+
+    product_table.setStyle(
+        TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#172554")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("ALIGN", (1, 1), (-1, -1), "RIGHT"),
+            ("FONTSIZE", (0, 0), (-1, -1), 9),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 9),
+            ("TOPPADDING", (0, 0), (-1, -1), 9)
+        ])
+    )
+
+    elements.append(product_table)
+
+    elements.append(Spacer(1, 20))
+
+    # Bill summary
+
+    summary = [
+        ["Subtotal", f"INR {order['subtotal']:,.2f}"],
+        ["Discount", f"- INR {order['discount']:,.2f}"],
+        ["GST (18%)", f"INR {order['tax']:,.2f}"],
+        ["Grand Total", f"INR {order['total']:,.2f}"]
+    ]
+
+    summary_table = Table(
+        summary,
+        colWidths=[350, 140]
+    )
+
+    summary_table.setStyle(
+        TableStyle([
+            ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+            ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+            ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#DBEAFE")),
+            ("TOPPADDING", (0, 0), (-1, -1), 8),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 8)
+        ])
+    )
+
+    elements.append(summary_table)
+
+    elements.append(Spacer(1, 30))
+
+    elements.append(
+        Paragraph(
+            "Thank you for shopping with ShopSmart!",
+            styles["Heading2"]
+        )
+    )
+
+    elements.append(
+        Paragraph(
+            "This is a computer-generated invoice.",
+            styles["Normal"]
+        )
+    )
+
+    pdf.build(elements)
+
+    buffer.seek(0)
+
+    return buffer.getvalue()
+
+
+
+# Dialogue box for order confirmation
 @st.dialog("Confirm Your Order")
 def confirm_order_dialog(order):
 
@@ -440,15 +678,43 @@ def confirm_order_dialog(order):
 
     if st.button("Confirm Order", type="primary"):
 
-        st.session_state.orders.insert(0, order)
+        # Check first-purchase coupon validity
+        if (
+            order["coupon"] == "WELCOME15"
+            and st.session_state.orders
+        ):
+            st.error(
+                "This first-purchase coupon is no longer valid."
+            )
 
-        clear_cart()
+        # Check whether sufficient stock is available
+        elif any(
+            item["qty"] > products[item["name"]]["stock"]
+            for item in order["items"]
+        ):
+            st.error(
+                "Some products no longer have sufficient stock. "
+                "Please review your cart."
+            )
 
-        st.session_state.last_order = order["order_id"]
+        else:
+            # Reduce stock after successful confirmation
+            for item in order["items"]:
+                products[item["name"]]["stock"] -= item["qty"]
 
-        go_to("Orders")
+            # Save the order
+            st.session_state.orders.insert(0, order)
 
-        st.rerun()
+            # Clear the cart
+            clear_cart()
+
+            # Store the latest order ID
+            st.session_state.last_order = order["order_id"]
+
+            # Navigate to Orders page
+            go_to("Orders")
+
+            st.rerun()
 
     if st.button("Cancel"):
         st.rerun()
@@ -479,9 +745,11 @@ with st.sidebar:
 
     menu = {
         "Home": "🏠 Home",
+        "Wishlist": "❤️ My Wishlist",
         "Cart": "🛒 My Cart",
         "Checkout": "💳 Checkout",
-        "Orders": "📦 Order History"
+        "Orders": "📦 Order History",
+        "Track Order": "🚚 Track My Order"
     }
 
     for page, label in menu.items():
@@ -572,6 +840,16 @@ if st.session_state.page == "Home":
         key="home_category"
     )
 
+    sort_option = st.selectbox(
+    "Sort Products By",
+    [
+        "Default",
+        "Price: Low to High",
+        "Price: High to Low"
+    ],
+    key="price_sort"
+)
+
     st.divider()
 
     st.subheader("🛍️ Explore Products")
@@ -595,6 +873,12 @@ if st.session_state.page == "Home":
 
         if matches_search and matches_category:
             filtered_products.append((key, product))
+
+    # Sort products based on the selected sort option
+    if sort_option == "Price: Low to High":
+        filtered_products.sort(key=lambda x: x[1]["price"])
+    elif sort_option == "Price: High to Low":
+        filtered_products.sort(key=lambda x: x[1]["price"], reverse=True)
 
     if not filtered_products:
 
@@ -655,32 +939,298 @@ if st.session_state.page == "Home":
                             unsafe_allow_html=True
                         )
 
+
+
+                        # Product action buttons
+
                         if st.button(
-                            "➕ Add to Cart",
-                            key=f"add_{key}",
+                            "🔍 View Details",
+                            key=f"details_{key}",
                             use_container_width=True
                         ):
 
-                            add_to_cart(key)
-
-                            st.toast(
-                                f"{product['name']} added to cart!"
-                            )
-
+                            st.session_state.selected_product = key
+                            go_to("Product Details")
                             st.rerun()
 
-    st.divider()
+                        col1, col2 = st.columns(2)
 
-    if st.button(
-        "🛒 View My Cart",
-        type="primary"
-    ):
-        go_to("Cart")
-        st.rerun()
+                        with col1:
+
+                            is_wishlisted = key in st.session_state.wishlist
+
+                            if st.button(
+                                "❤️ Wishlisted" if is_wishlisted else "♡ Wishlist",
+                                key=f"wishlist_{key}",
+                                use_container_width=True
+                            ):
+
+                                toggle_wishlist(key)
+                                st.rerun()
+
+                        with col2:
+
+                            if st.button(
+                                "➕ Add to Cart",
+                                key=f"add_{key}",
+                                use_container_width=True
+                            ):
+
+                                if add_to_cart(key):
+
+                                    st.toast(
+                                        f"{product['name']} added to cart!"
+                                    )
+
+                                    st.rerun()
+
+        st.divider()
+
+        if st.button(
+            "🛒 View My Cart",
+            type="primary",
+            use_container_width=True
+        ):
+
+            go_to("Cart")
+            st.rerun()
+
+
+        # ==========================================
+        # RECENTLY VIEWED PRODUCTS
+        # ==========================================
+
+        if st.session_state.recently_viewed:
+
+            st.markdown("---")
+
+            st.subheader("🕒 Recently Viewed Products")
+
+            recent_products = st.session_state.recently_viewed
+
+            columns = st.columns(len(recent_products))
+
+            for i, recent_name in enumerate(recent_products):
+
+                recent_product = products[recent_name]
+
+                with columns[i]:
+
+                    st.image(
+                        recent_product["image"],
+                        use_container_width=True
+                    )
+
+                    st.markdown(f"**{recent_product['name']}**")
+
+                    st.write(money(recent_product["price"]))
+
+                    if st.button(
+                        "View Details",
+                        key=f"recent_details_{recent_name}"
+                    ):
+
+                        st.session_state.selected_product = recent_name
+
+                        go_to("Product Details")
+
+                        st.rerun()
 
 
 # =====================================================
-# 9. CART PAGE
+# PRODUCT DETAILS PAGE
+# =====================================================
+
+elif st.session_state.page == "Product Details":
+
+    name = st.session_state.selected_product
+
+    if name not in products:
+
+        st.warning("Please select a valid product.")
+
+        if st.button("Back to Home"):
+            go_to("Home")
+            st.rerun()
+
+    else:
+
+        # Add product to Recently Viewed list
+        if name in st.session_state.recently_viewed:
+            st.session_state.recently_viewed.remove(name)
+
+        st.session_state.recently_viewed.insert(0, name)
+
+        # Keep only the latest 5 products
+        st.session_state.recently_viewed = (
+            st.session_state.recently_viewed[:5]
+        )
+
+        product = products[name]
+
+        st.title("🛍️ Product Details")
+
+        st.divider()
+
+        col1, col2 = st.columns([1, 1])
+
+        with col1:
+
+            st.image(
+                product["image"],
+                use_container_width=True
+            )
+
+        with col2:
+
+            st.subheader(product["name"])
+
+            st.caption(product["category"])
+
+            st.markdown(
+                f"<h2 style='color:#2563eb;'>"
+                f"{money(product['price'])}</h2>",
+                unsafe_allow_html=True
+            )
+
+            st.write(product["description"])
+
+            st.divider()
+
+            st.write("**Product Information**")
+
+            st.write(f"Category: {product['category']}")
+
+            
+            if product["stock"] > 0:
+
+                st.success(
+                    f"Available Stock: {product['stock']} units"
+                )
+
+            else:
+
+                st.error("Out of Stock")
+
+
+            st.divider()
+
+            if st.button(
+                "➕ Add to Cart",
+                type="primary",
+                use_container_width=True
+            ):
+
+                if add_to_cart(name):
+
+                    st.toast(
+                        f"{product['name']} added to cart!"
+                    )
+
+                st.rerun()
+
+            is_wishlisted = name in st.session_state.wishlist
+
+            if st.button(
+                "❤️ Remove from Wishlist"
+                if is_wishlisted
+                else "♡ Add to Wishlist",
+                use_container_width=True
+            ):
+
+                toggle_wishlist(name)
+                st.rerun()
+
+        st.divider()
+
+        if st.button("⬅️ Back to Products"):
+
+            go_to("Home")
+            st.rerun()
+
+
+# =====================================================
+# 9. WISHLIST PAGE
+# =====================================================
+
+elif st.session_state.page == "Wishlist":
+
+    st.title("❤️ My Wishlist")
+
+    wishlist = st.session_state.wishlist
+
+    if not wishlist:
+
+        st.info("Your wishlist is currently empty.")
+
+        if st.button("Explore Products", type="primary"):
+
+            go_to("Home")
+            st.rerun()
+
+    else:
+
+        st.write(
+            f"You have {len(wishlist)} products in your wishlist."
+        )
+
+        st.divider()
+
+        for name in list(wishlist):
+
+            product = products[name]
+
+            col1, col2, col3 = st.columns([1, 2, 1])
+
+            with col1:
+
+                st.image(
+                    product["image"],
+                    use_container_width=True
+                )
+
+            with col2:
+
+                st.subheader(product["name"])
+
+                st.caption(product["category"])
+
+                st.write(
+                    money(product["price"])
+                )
+
+                st.write(product["description"])
+
+            with col3:
+
+                if st.button(
+                    "🛒 Add to Cart",
+                    key=f"wish_add_{name}",
+                    use_container_width=True
+                ):
+
+                    if add_to_cart(name):
+
+                        st.toast(
+                        f"{product['name']} added to cart!"
+                    )
+
+                    st.rerun()
+
+                if st.button(
+                    "❌ Remove",
+                    key=f"wish_remove_{name}",
+                    use_container_width=True
+                ):
+
+                    toggle_wishlist(name)
+                    st.rerun()
+
+            st.divider()
+
+
+# =====================================================
+# 10. CART PAGE
 # =====================================================
 
 elif st.session_state.page == "Cart":
@@ -822,6 +1372,13 @@ elif st.session_state.page == "Cart":
 
                     st.error("Invalid coupon code. Please try again.")
 
+                elif coupon_code == "WELCOME15" and st.session_state.orders:
+
+                    st.error(
+                        "WELCOME15 is valid only for your first purchase. "
+                        "You have already placed an order."
+                    )
+
                 elif subtotal < coupons[coupon_code]["min_purchase"]:
 
                     st.error(
@@ -899,7 +1456,7 @@ elif st.session_state.page == "Cart":
 
 
 # =====================================================
-# 10. CHECKOUT PAGE
+# 11. CHECKOUT PAGE
 # =====================================================
 
 elif st.session_state.page == "Checkout":
@@ -1030,14 +1587,27 @@ elif st.session_state.page == "Checkout":
                         "tax": tax,
                         "total": total,
                         "coupon": st.session_state.coupon,
-                        "status": "Order Placed"
+                        "status": "Order Placed",
+                        # Complete delivery stages
+                        "tracking_status": [
+                            "Order Placed",
+                            "Processing",
+                            "Shipped",
+                            "Out for Delivery",
+                            "Delivered"
+                        ],
+
+                        # Estimated delivery date
+                        "estimated_delivery": (
+                            datetime.now() + timedelta(days=5)
+                        ).strftime("%d-%m-%Y")
                     }
 
                     confirm_order_dialog(order)
 
 
 # =====================================================
-# 11. ORDER HISTORY PAGE
+# 12. ORDER HISTORY PAGE
 # =====================================================
 
 elif st.session_state.page == "Orders":
@@ -1132,13 +1702,214 @@ elif st.session_state.page == "Orders":
                     f"### Total: {money(order['total'])}"
                 )
 
+                st.divider()
+
+                invoice_pdf = generate_invoice(order)
+
+                st.download_button(
+                    label="📄 Download Invoice (PDF)",
+                    data=invoice_pdf,
+                    file_name=f"ShopSmart_Invoice_{order['order_id']}.pdf",
+                    mime="application/pdf",
+                    key=f"invoice_{order['order_id']}",
+                    use_container_width=True
+                )
+
                 st.caption(
                     f"Coupon: {order['coupon'] or 'Not applied'}"
                 )
 
 
+
 # =====================================================
-# 12. FOOTER
+# 13. ORDER TRACKING PAGE
+# =====================================================
+
+elif st.session_state.page == "Track Order":
+
+    st.title("🚚 Track My Order")
+
+    st.write(
+        "Track your order and check its delivery progress."
+    )
+
+    st.divider()
+
+    # Check whether orders are available
+
+    if not st.session_state.orders:
+
+        st.info(
+            "You haven't placed any orders yet."
+        )
+
+        if st.button("Start Shopping"):
+
+            go_to("Home")
+            st.rerun()
+
+    else:
+
+        # Get all order IDs
+
+        order_ids = [
+            order["order_id"]
+            for order in st.session_state.orders
+        ]
+
+        # Select an order
+
+        selected_order_id = st.selectbox(
+            "Select Your Order",
+            order_ids
+        )
+
+        # Find the selected order
+
+        order = next(
+            o for o in st.session_state.orders
+            if o["order_id"] == selected_order_id
+        )
+
+        st.divider()
+
+        # Order information
+
+        st.subheader("📋 Order Information")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+
+            st.write("**Order ID:**")
+            st.write(order["order_id"])
+
+            st.write("**Order Date:**")
+            st.write(order["date"])
+
+        with col2:
+
+            st.write("**Customer:**")
+            st.write(order["customer"])
+
+            st.write("**Estimated Delivery:**")
+            st.write(
+                order.get(
+                    "estimated_delivery",
+                    "Not available"
+                )
+            )
+
+        st.divider()
+
+        # Current order status
+
+        st.subheader("📦 Current Order Status")
+
+        status_order = order.get(
+            "tracking_status",
+            [
+                "Order Placed",
+                "Processing",
+                "Shipped",
+                "Out for Delivery",
+                "Delivered"
+            ]
+        )
+
+        current_status = order.get(
+            "status",
+            "Order Placed"
+        )
+
+        current_index = status_order.index(current_status)
+
+        st.info(f"Current Status: {current_status}")
+
+        # Progress bar
+
+        progress = (
+            current_index + 1
+        ) / len(status_order)
+
+        st.progress(progress)
+
+        st.caption(
+            f"Delivery progress: "
+            f"{current_index + 1}/{len(status_order)} stages"
+        )
+
+        st.divider()
+
+        # Delivery timeline
+
+        st.subheader("🛣️ Delivery Timeline")
+
+        for index, status in enumerate(status_order):
+
+            if index < current_index:
+
+                st.success(
+                    f"✓ {status} — Completed"
+                )
+
+            elif index == current_index:
+
+                st.info(
+                    f"📦 {status} — Current Status"
+                )
+
+            else:
+
+                st.write(
+                    f"○ {status} — Pending"
+                )
+
+        st.divider()
+
+        # Demonstration status update control
+
+        st.subheader("⚙️ Demo Status Update")
+
+        st.caption(
+            "For demonstration purposes, update the order "
+            "status to simulate delivery progress."
+        )
+
+        new_status = st.selectbox(
+            "Update Delivery Status",
+            status_order,
+            index=current_index,
+            key=f"status_select_{order['order_id']}"
+        )
+
+        if st.button(
+            "Update Order Status",
+            key=f"update_status_{order['order_id']}",
+            use_container_width=True
+        ):
+
+            order["status"] = new_status
+
+            st.success(
+                "Order status updated successfully!"
+            )
+
+            st.rerun()
+
+        st.divider()
+
+        if st.button(
+            "⬅️ Back to Home",
+            use_container_width=True
+        ):
+
+            go_to("Home")
+            st.rerun()
+
+
+# =====================================================
+# 14. FOOTER
 # =====================================================
 
 
