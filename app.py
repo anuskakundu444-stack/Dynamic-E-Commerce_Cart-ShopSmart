@@ -734,90 +734,88 @@ elif st.session_state.page == "Cart":
 
         # Coupon section
 
-        # Coupon section
+        st.subheader("🎟️ Apply Coupon")
 
-st.subheader("🎟️ Apply Coupon")
-
-# Calculate current cart subtotal
-subtotal = sum(
-    products[name]["price"] * qty
-    for name, qty in st.session_state.cart.items()
-)
-
-# Display available coupons
-with st.expander("🎁 View Available Coupons"):
-
-    for code, details in coupons.items():
-
-        st.markdown(f"**{code}**")
-
-        st.caption(details["description"])
-
-        st.write(
-            f"Maximum discount: {money(details['max_discount'])}"
+        # Calculate current cart subtotal
+        subtotal = sum(
+            products[name]["price"] * qty
+            for name, qty in st.session_state.cart.items()
         )
 
-        st.divider()
+        # Display available coupons
+        with st.expander("🎁 View Available Coupons"):
+
+            for code, details in coupons.items():
+
+                st.markdown(f"**{code}**")
+
+                st.caption(details["description"])
+
+                st.write(
+                    f"Maximum discount: {money(details['max_discount'])}"
+                )
+
+                st.divider()
 
 
-# Coupon input form
-with st.form("coupon_form"):
+        # Coupon input form
+        with st.form("coupon_form"):
 
-    coupon_code = st.text_input(
-        "Enter Coupon Code",
-        placeholder="e.g. SAVE10"
-    ).upper().strip()
+            coupon_code = st.text_input(
+                "Enter Coupon Code",
+                placeholder="e.g. SAVE10"
+            ).upper().strip()
 
-    apply_button = st.form_submit_button(
-        "🎟️ Apply Coupon",
-        use_container_width=True
-    )
-
-    if apply_button:
-
-        if not coupon_code:
-
-            st.warning("Please enter a coupon code.")
-
-        elif coupon_code not in coupons:
-
-            st.error("Invalid coupon code. Please try again.")
-
-        elif subtotal < coupons[coupon_code]["min_purchase"]:
-
-            st.error(
-                f"This coupon requires a minimum purchase of "
-                f"{money(coupons[coupon_code]['min_purchase'])}."
+            apply_button = st.form_submit_button(
+                "🎟️ Apply Coupon",
+                use_container_width=True
             )
 
-        else:
+            if apply_button:
 
-            st.session_state.coupon = coupon_code
+                if not coupon_code:
+
+                    st.warning("Please enter a coupon code.")
+
+                elif coupon_code not in coupons:
+
+                    st.error("Invalid coupon code. Please try again.")
+
+                elif subtotal < coupons[coupon_code]["min_purchase"]:
+
+                    st.error(
+                        f"This coupon requires a minimum purchase of "
+                        f"{money(coupons[coupon_code]['min_purchase'])}."
+                    )
+
+                else:
+
+                    st.session_state.coupon = coupon_code
+
+                    st.success(
+                        f"Congratulations! {coupon_code} applied successfully."
+                    )
+
+
+        # Display active coupon
+        if st.session_state.coupon:
+
+            active_coupon = coupons[st.session_state.coupon]
 
             st.success(
-                f"Congratulations! {coupon_code} applied successfully."
+                f"Active Coupon: {st.session_state.coupon} "
+                f"({active_coupon['discount']}% OFF)"
             )
 
+            if st.button("❌ Remove Coupon"):
 
-# Display active coupon
-if st.session_state.coupon:
+                st.session_state.coupon = ""
+                st.session_state.discount = 0
 
-    active_coupon = coupons[st.session_state.coupon]
+                st.rerun()
 
-    st.success(
-        f"Active Coupon: {st.session_state.coupon} "
-        f"({active_coupon['discount']}% OFF)"
-    )
 
-    if st.button("❌ Remove Coupon"):
-
-        st.session_state.coupon = ""
-        st.session_state.discount = 0
-
-        st.rerun()
-
-        # Bill summary
-
+        # Bill Summary
         st.divider()
 
         st.subheader("🧾 Cart Summary")
@@ -825,9 +823,7 @@ if st.session_state.coupon:
         subtotal, discount, tax, total = calculate_bill()
 
         st.write("Subtotal:", money(subtotal))
-
         st.write("Discount:", money(discount))
-
         st.write("GST (18%):", money(tax))
 
         st.markdown("---")
@@ -838,6 +834,7 @@ if st.session_state.coupon:
             unsafe_allow_html=True
         )
 
+        # Navigation Buttons
         col1, col2 = st.columns(2)
 
         with col1:
