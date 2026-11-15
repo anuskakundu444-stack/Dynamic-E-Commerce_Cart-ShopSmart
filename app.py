@@ -412,6 +412,29 @@ def calculate_bill():
     return subtotal, discount_amount, tax, grand_total
 
 
+#Dialogue box for order confirmation
+@st.dialog("Confirm Your Order")
+def confirm_order_dialog(order):
+
+    st.write("Are you sure you want to place this order?")
+
+    st.write("Grand Total:", money(order["total"]))
+
+    if st.button("Confirm Order", type="primary"):
+
+        st.session_state.orders.insert(0, order)
+
+        clear_cart()
+
+        st.session_state.last_order = order["order_id"]
+
+        go_to("Orders")
+
+        st.rerun()
+
+    if st.button("Cancel"):
+        st.rerun()
+
 def total_cart_items():
 
     return sum(st.session_state.cart.values())
@@ -992,17 +1015,7 @@ elif st.session_state.page == "Checkout":
                         "status": "Order Placed"
                     }
 
-                    st.session_state.orders.insert(
-                        0, order
-                    )
-
-                    clear_cart()
-
-                    st.session_state.last_order = order["order_id"]
-
-                    go_to("Orders")
-
-                    st.rerun()
+                    confirm_order_dialog(order)
 
 
 # =====================================================
