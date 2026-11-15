@@ -292,7 +292,7 @@ coupons = {
         "discount": 15,
         "min_purchase": 1000,
         "max_discount": 1500,
-        "description": "Get 15% OFF on purchases above ₹1,000"
+        "description": "Get 15% OFF on your first purchase (minimum purchase ₹1,000)"
     },
 
     "FESTIVE25": {
@@ -338,13 +338,31 @@ def money(amount):
 
 
 def product_label(name, qty):
-    if name == "mouse":
-        return "mouse" if qty == 1 else "mice"
 
-    if name == "headphones":
-        return "headphones"
+    singular = products[name]["name"]
 
-    return products[name]["name"] if qty == 1 else products[name]["name"] + "s"
+    if qty == 1:
+        return singular
+
+    plural_names = {
+        "laptop": "Laptops",
+        "mouse": "Mice",
+        "keyboard": "Keyboards",
+        "headphones": "Headphones",
+        "pen": "Pens",
+        "smartphone": "Smartphones",
+        "tablet": "Tablets",
+        "monitor": "Monitors",
+        "printer": "Printers",
+        "usb drive": "USB Drives",
+        "bluetooth speaker": "Bluetooth Speakers",
+        "earbuds": "Wireless Earbuds",
+        "microphone": "Microphones",
+        "notebook": "Notebooks",
+        "marker": "Marker Sets"
+    }
+
+    return plural_names.get(name, singular + "s")
 
 
 def add_to_cart(name):

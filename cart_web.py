@@ -41,7 +41,7 @@ coupons = {
         "discount": 15,
         "min_purchase": 1000,
         "max_discount": 1500,
-        "description": "Get 15% OFF on your first purchase"
+        "description": "Get 15% OFF on your first purchase (minimum purchase ₹1,000)"
     },
 
     "FESTIVE25": {
